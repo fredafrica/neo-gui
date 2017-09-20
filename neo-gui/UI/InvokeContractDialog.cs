@@ -1,13 +1,11 @@
 ﻿using Neo.Core;
-using Neo.Cryptography.ECC;
+using Neo.IO.Json;
 using Neo.Properties;
 using Neo.SmartContract;
 using Neo.VM;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Numerics;
 using System.Text;
 using System.Windows.Forms;
 
@@ -18,6 +16,8 @@ namespace Neo.UI
         private InvocationTransaction tx;
         private UInt160 script_hash;
         private ContractParameter[] parameters;
+
+        private static readonly Fixed8 net_fee = Fixed8.FromDecimal(0.001m);
 
         public InvokeContractDialog(InvocationTransaction tx = null)
         {
@@ -32,6 +32,7 @@ namespace Neo.UI
 
         public InvocationTransaction GetTransaction()
         {
+            Fixed8 fee = tx.Gas.Equals(Fixed8.Zero) ? net_fee : Fixed8.Zero;
             return Program.CurrentWallet.MakeTransaction(new InvocationTransaction
             {
                 Version = tx.Version,
@@ -40,73 +41,7 @@ namespace Neo.UI
                 Attributes = tx.Attributes,
                 Inputs = tx.Inputs,
                 Outputs = tx.Outputs
-            });
-        }
-
-        private void PrintStack(StringBuilder sb, IList<StackItem> items)
-        {
-            for (int i = 0; i < items.Count; i++)
-            {
-                if (items[i].IsArray)
-                {
-                    sb.Append('[');
-                    PrintStack(sb, items[i].GetArray());
-                    sb.Append(']');
-                }
-                else
-                {
-                    try
-                    {
-                        sb.Append(items[i].GetByteArray().ToHexString());
-                    }
-                    catch (NotSupportedException)
-                    {
-                        sb.Append("(interface)");
-                    }
-                }
-                sb.Append(", ");
-            }
-            if (items.Count > 0) sb.Length -= 2;
-        }
-
-        private void PushParameters(ScriptBuilder sb, IList<ContractParameter> parameters)
-        {
-            for (int i = parameters.Count - 1; i >= 0; i--)
-            {
-                switch (parameters[i].Type)
-                {
-                    case ContractParameterType.Signature:
-                    case ContractParameterType.ByteArray:
-                        sb.EmitPush((byte[])parameters[i].Value);
-                        break;
-                    case ContractParameterType.Boolean:
-                        sb.EmitPush((bool)parameters[i].Value);
-                        break;
-                    case ContractParameterType.Integer:
-                        sb.EmitPush((BigInteger)parameters[i].Value);
-                        break;
-                    case ContractParameterType.Hash160:
-                        sb.EmitPush((UInt160)parameters[i].Value);
-                        break;
-                    case ContractParameterType.Hash256:
-                        sb.EmitPush((UInt256)parameters[i].Value);
-                        break;
-                    case ContractParameterType.PublicKey:
-                        sb.EmitPush((ECPoint)parameters[i].Value);
-                        break;
-                    case ContractParameterType.String:
-                        sb.EmitPush((string)parameters[i].Value);
-                        break;
-                    case ContractParameterType.Array:
-                        {
-                            IList<ContractParameter> ps = (IList<ContractParameter>)parameters[i].Value;
-                            PushParameters(sb, ps);
-                            sb.EmitPush(ps.Count);
-                            sb.Emit(OpCode.PACK);
-                        }
-                        break;
-                }
-            }
+            }, fee: fee);
         }
 
         private void UpdateScript()
@@ -114,8 +49,7 @@ namespace Neo.UI
             if (parameters.Any(p => p.Value == null)) return;
             using (ScriptBuilder sb = new ScriptBuilder())
             {
-                PushParameters(sb, parameters);
-                sb.EmitAppCall(script_hash, true);
+                sb.EmitAppCall(script_hash, parameters);
                 textBox6.Text = sb.ToArray().ToHexString();
             }
         }
@@ -163,21 +97,20 @@ namespace Neo.UI
             if (tx.Inputs == null) tx.Inputs = new CoinReference[0];
             if (tx.Outputs == null) tx.Outputs = new TransactionOutput[0];
             if (tx.Scripts == null) tx.Scripts = new Witness[0];
-            ApplicationEngine engine = TestEngine.Run(tx.Script, tx);
-            if (engine != null)
+            ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx);
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"VM State: {engine.State}");
+            sb.AppendLine($"Gas Consumed: {engine.GasConsumed}");
+            sb.AppendLine($"Evaluation Stack: {new JArray(engine.EvaluationStack.Select(p => p.ToParameter().ToJson()))}");
+            textBox7.Text = sb.ToString();
+            if (!engine.State.HasFlag(VMState.FAULT))
             {
                 tx.Gas = engine.GasConsumed - Fixed8.FromDecimal(10);
-                if (tx.Gas < Fixed8.One) tx.Gas = Fixed8.One;
+                if (tx.Gas < Fixed8.Zero) tx.Gas = Fixed8.Zero;
                 tx.Gas = tx.Gas.Ceiling();
-                label7.Text = tx.Gas + " gas";
+                Fixed8 fee = tx.Gas.Equals(Fixed8.Zero) ? net_fee : tx.Gas;
+                label7.Text = fee + " gas";
                 button3.Enabled = true;
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine($"VM State: {engine.State}");
-                sb.AppendLine($"Gas Consumed: {engine.GasConsumed}");
-                sb.Append("Evaluation Stack: ");
-                PrintStack(sb, engine.EvaluationStack.ToArray());
-                sb.AppendLine();
-                textBox7.Text = sb.ToString();
             }
             else
             {

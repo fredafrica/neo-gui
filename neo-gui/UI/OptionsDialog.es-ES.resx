@@ -117,46 +117,19 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="button8.Text" xml:space="preserve">
-    <value>获取合约参数上下文</value>
-  </data>
-  <data name="button7.Text" xml:space="preserve">
-    <value>查找零钱</value>
-  </data>
-  <data name="button6.Text" xml:space="preserve">
-    <value>添加交易输出</value>
-  </data>
-  <data name="button5.Text" xml:space="preserve">
-    <value>交易备注</value>
-  </data>
-  <data name="tabPage1.Text" xml:space="preserve">
-    <value>交易构造器</value>
-  </data>
-  <data name="button4.Text" xml:space="preserve">
-    <value>广播</value>
-  </data>
-  <data name="button3.Text" xml:space="preserve">
-    <value>更新</value>
-  </data>
-  <data name="button2.Text" xml:space="preserve">
-    <value>显示</value>
+  <data name="groupBox1.Text" xml:space="preserve">
+    <value>Lista de contratos NEP-5</value>
   </data>
   <data name="button1.Text" xml:space="preserve">
-    <value>加载</value>
+    <value>Aceptar</value>
   </data>
-  <data name="groupBox4.Text" xml:space="preserve">
-    <value>新值</value>
+  <data name="button2.Text" xml:space="preserve">
+    <value>Cancelar</value>
   </data>
-  <data name="groupBox3.Text" xml:space="preserve">
-    <value>当前值</value>
-  </data>
-  <data name="groupBox2.Text" xml:space="preserve">
-    <value>参数</value>
-  </data>
-  <data name="tabPage2.Text" xml:space="preserve">
-    <value>合约参数</value>
+  <data name="button3.Text" xml:space="preserve">
+    <value>Aplicar</value>
   </data>
   <data name="$this.Text" xml:space="preserve">
-    <value>NEO开发人员工具</value>
+    <value>Optiones</value>
   </data>
 </root>
